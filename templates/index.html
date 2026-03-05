@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Stroke Risk Predictor</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f7f6f3;
+      --surface: #ffffff;
+      --border: #e2e0da;
+      --text: #1a1a18;
+      --muted: #888882;
+      --accent: #1a1a18;
+      --low: #2d6a4f;
+      --mid: #b5620a;
+      --high: #9b1c1c;
+      --low-bg: #d8f3dc;
+      --mid-bg: #fef3c7;
+      --high-bg: #fee2e2;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 48px 24px;
+    }
+
+    .container {
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 40px;
+    }
+
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+    }
+
+    header p {
+      margin-top: 6px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-weight: 300;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 24px 0;
+    }
+
+    .section-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+    }
+
+    input, select {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.92rem;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--accent);
+    }
+
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888882' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+      cursor: pointer;
+    }
+
+    button {
+      margin-top: 28px;
+      width: 100%;
+      padding: 13px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.92rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      letter-spacing: 0.01em;
+    }
+
+    button:hover { opacity: 0.85; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .result {
+      margin-top: 28px;
+      padding: 20px 24px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .result.visible { display: block; }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .result-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .risk-badge {
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    .risk-low  { background: var(--low-bg);  color: var(--low); }
+    .risk-mid  { background: var(--mid-bg);  color: var(--mid); }
+    .risk-high { background: var(--high-bg); color: var(--high); }
+
+    .prob-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-top: 1px solid var(--border);
+      font-size: 0.88rem;
+    }
+
+    .prob-row span:last-child {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .bar-wrap {
+      margin-top: 16px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--accent);
+      transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .error-msg {
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: var(--high-bg);
+      color: var(--high);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      display: none;
+    }
+
+    .error-msg.visible { display: block; }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <header>
+      <h1>Stroke Risk Predictor</h1>
+      <p>Clinical risk assessment · Random Forest model</p>
+    </header>
+
+    <div class="section-label">Patient Information</div>
+    <div class="grid">
+
+      <div class="field">
+        <label for="age">Age</label>
+        <input type="number" id="age" placeholder="e.g. 52" min="0" max="120"/>
+      </div>
+
+      <div class="field">
+        <label for="bmi">BMI</label>
+        <input type="number" id="bmi" placeholder="e.g. 28.3" step="0.1"/>
+      </div>
+
+      <div class="field full">
+        <label for="avg_glucose_level">Average Glucose Level (mg/dL)</label>
+        <input type="number" id="avg_glucose_level" placeholder="e.g. 105.0" step="0.1"/>
+      </div>
+
+      <div class="field">
+        <label for="gender">Gender</label>
+        <select id="gender">
+          <option value="">Select</option>
+          <option>Male</option>
+          <option>Female</option>
+          <option>Other</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="ever_married">Ever Married</label>
+        <select id="ever_married">
+          <option value="">Select</option>
+          <option>Yes</option>
+          <option>No</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="work_type">Work Type</label>
+        <select id="work_type">
+          <option value="">Select</option>
+          <option>Private</option>
+          <option>Self-employed</option>
+          <option>Govt_job</option>
+          <option>children</option>
+          <option>Never_worked</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="Residence_type">Residence Type</label>
+        <select id="Residence_type">
+          <option value="">Select</option>
+          <option>Urban</option>
+          <option>Rural</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="smoking_status">Smoking Status</label>
+        <select id="smoking_status">
+          <option value="">Select</option>
+          <option>never smoked</option>
+          <option>formerly smoked</option>
+          <option>smokes</option>
+          <option>Unknown</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="hypertension">Hypertension</label>
+        <select id="hypertension">
+          <option value="">Select</option>
+          <option value="0">No</option>
+          <option value="1">Yes</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="heart_disease">Heart Disease</label>
+        <select id="heart_disease">
+          <option value="">Select</option>
+          <option value="0">No</option>
+          <option value="1">Yes</option>
+        </select>
+      </div>
+
+    </div>
+
+    <button id="submitBtn" onclick="predict()">Assess Risk</button>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="result" id="result">
+      <div class="result-header">
+        <span class="result-label">Result</span>
+        <span class="risk-badge" id="riskBadge"></span>
+      </div>
+      <div class="prob-row">
+        <span>No Stroke</span>
+        <span id="noStrokeVal"></span>
+      </div>
+      <div class="prob-row">
+        <span>Stroke</span>
+        <span id="strokeVal"></span>
+      </div>
+      <div class="bar-wrap">
+        <div class="bar-fill" id="barFill" style="width:0%"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    async function predict() {
+      const btn = document.getElementById('submitBtn');
+      const errorMsg = document.getElementById('errorMsg');
+      const result = document.getElementById('result');
+
+      errorMsg.classList.remove('visible');
+      result.classList.remove('visible');
+
+      const fields = ['age','bmi','avg_glucose_level','gender','ever_married',
+                      'work_type','Residence_type','smoking_status','hypertension','heart_disease'];
+
+      for (const f of fields) {
+        if (!document.getElementById(f).value) {
+          errorMsg.textContent = `Please fill in all fields before submitting.`;
+          errorMsg.classList.add('visible');
+          return;
+        }
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Assessing...';
+
+      const payload = {
+        age:               parseFloat(document.getElementById('age').value),
+        bmi:               parseFloat(document.getElementById('bmi').value),
+        avg_glucose_level: parseFloat(document.getElementById('avg_glucose_level').value),
+        gender:            document.getElementById('gender').value,
+        ever_married:      document.getElementById('ever_married').value,
+        work_type:         document.getElementById('work_type').value,
+        Residence_type:    document.getElementById('Residence_type').value,
+        smoking_status:    document.getElementById('smoking_status').value,
+        hypertension:      parseInt(document.getElementById('hypertension').value),
+        heart_disease:     parseInt(document.getElementById('heart_disease').value),
+      };
+
+      try {
+        const res = await fetch('/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+
+        const strokePct  = (data.probability.stroke * 100).toFixed(1);
+        const noStrokePct = (data.probability.no_stroke * 100).toFixed(1);
+
+        document.getElementById('noStrokeVal').textContent = noStrokePct + '%';
+        document.getElementById('strokeVal').textContent   = strokePct + '%';
+        document.getElementById('barFill').style.width     = strokePct + '%';
+
+        const badge = document.getElementById('riskBadge');
+        if (data.probability.stroke > 0.5) {
+          badge.textContent = 'High Risk';
+          badge.className = 'risk-badge risk-high';
+        } else if (data.probability.stroke > 0.3) {
+          badge.textContent = 'Medium Risk';
+          badge.className = 'risk-badge risk-mid';
+        } else {
+          badge.textContent = 'Low Risk';
+          badge.className = 'risk-badge risk-low';
+        }
+
+        result.classList.add('visible');
+
+      } catch (err) {
+        errorMsg.textContent = 'Something went wrong. Check your API is running.';
+        errorMsg.classList.add('visible');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Assess Risk';
+      }
+    }
+  </script>
+</body>
+</html>
